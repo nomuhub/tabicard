@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旅カードメーカー</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#09090f; --sf:#111118; --sf2:#18181f;
+  --bd:#22212e; --bd2:#2d2b3e;
+  --gold:#c9a84c; --gold-dim:#8a6020; --gold-faint:rgba(201,168,76,0.08);
+  --text:#e8e0d0; --dim:#8a8070; --ghost:#2a2535;
+  --r:10px; --font:'Noto Sans JP','Hiragino Sans',sans-serif;
+}
+body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; padding:20px 16px 60px; line-height:1.6; }
+.wrap { max-width:900px; margin:0 auto; }
+
+/* header */
+header { text-align:center; padding-bottom:16px; margin-bottom:20px; border-bottom:1px solid var(--bd); }
+.eyebrow { font-size:9px; letter-spacing:.35em; color:var(--ghost); margin-bottom:4px; }
+h1 { font-size:22px; font-weight:900; color:#f5e8cc; letter-spacing:.1em; }
+.subtitle { font-size:10px; color:var(--ghost); margin-top:4px; }
+
+/* import banner */
+#import-banner { display:none; background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.28); border-radius:8px; padding:11px 14px; margin-bottom:14px; align-items:center; justify-content:space-between; gap:10px; }
+#import-banner span { font-size:12px; color:var(--gold); }
+#import-banner button { border:none; background:linear-gradient(135deg,var(--gold),var(--gold-dim)); color:#0a0a15; font-weight:700; border-radius:6px; padding:6px 14px; cursor:pointer; font-size:12px; font-family:var(--font); }
+
+/* tabs */
+.tabs { display:flex; background:rgba(255,255,255,.03); border:1px solid var(--bd); border-radius:8px; padding:3px; margin-bottom:18px; gap:2px; }
+.tab { flex:1; padding:9px; border:none; border-radius:6px; cursor:pointer; font-family:var(--font); font-size:12px; transition:all .15s; background:transparent; color:#4a4560; }
+.tab.on { background:var(--gold-faint); color:var(--gold); font-weight:700; border:1px solid rgba(201,168,76,.25); }
+.badge { display:inline-flex; align-items:center; padding:1px 8px; border:1px solid var(--bd2); border-radius:20px; font-size:9px; color:var(--dim); margin-left:6px; }
+
+/* panels */
+.panel { display:none; }
+.panel.on { display:block; }
+
+/* sections */
+.section { background:var(--sf); border:1px solid var(--bd); border-radius:var(--r); padding:16px; margin-bottom:14px; }
+.st { font-size:10px; letter-spacing:.15em; color:var(--gold); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.st::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(201,168,76,.3),transparent); }
+
+/* presets */
+.presets { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; }
+.pbtn { padding:4px 10px; border-radius:20px; font-size:11px; cursor:pointer; border:1px solid var(--bd2); background:transparent; color:#6b5f80; font-family:var(--font); transition:all .12s; }
+.pbtn.on { border-color:rgba(201,168,76,.6); background:var(--gold-faint); color:var(--gold); font-weight:700; }
+
+/* form */
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.g-main { display:grid; grid-template-columns:2fr 70px; gap:10px; }
+@media(max-width:520px){ .g2,.g3,.g-main,.editor-layout { grid-template-columns:1fr!important; } }
+label { font-size:10px; color:#6b5f80; display:block; margin-bottom:4px; letter-spacing:.04em; }
+.req { color:#e63946; }
+input,textarea { width:100%; background:rgba(255,255,255,.05); border:1px solid var(--bd2); border-radius:6px; padding:8px 10px; color:var(--text); font-size:13px; outline:none; font-family:var(--font); transition:border-color .12s; }
+input:focus,textarea:focus { border-color:rgba(201,168,76,.5); }
+textarea { resize:vertical; line-height:1.7; }
+
+/* type buttons */
+.types { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.tbtn { padding:9px 4px; border-radius:7px; font-size:11px; cursor:pointer; border:1px solid var(--bd); background:rgba(255,255,255,.02); color:#4a4560; font-family:var(--font); transition:all .12s; text-align:center; line-height:1.5; }
+.tbtn .em { font-size:18px; display:block; margin-bottom:2px; }
+.tbtn.on { font-weight:700; }
+
+/* image drop */
+.img-drop { border:1.5px dashed var(--bd2); border-radius:8px; cursor:pointer; min-height:64px; display:flex; align-items:center; justify-content:center; background-size:cover; background-position:center; position:relative; overflow:hidden; transition:border-color .15s; }
+.img-drop:hover { border-color:rgba(201,168,76,.4); }
+.img-ph { font-size:11px; color:var(--ghost); pointer-events:none; }
+.img-ov { position:absolute; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; }
+.img-drop:hover .img-ov { opacity:1; }
+.img-ov span { font-size:11px; color:white; }
+.img-clr { position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; background:#b91c1c; color:white; border:none; cursor:pointer; font-size:9px; display:none; align-items:center; justify-content:center; z-index:2; }
+
+/* stars */
+.stat-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.sl { font-size:11px; color:var(--dim); min-width:72px; flex-shrink:0; }
+.stars { display:flex; gap:3px; }
+.star { font-size:22px; cursor:pointer; line-height:1; color:#1e1a2e; transition:color .1s,transform .1s; user-select:none; }
+.star.on { color:#f59e0b; }
+.star:hover { transform:scale(1.15); }
+
+/* buttons */
+.btn { border:none; border-radius:8px; cursor:pointer; font-family:var(--font); font-weight:700; transition:all .15s; padding:11px 18px; font-size:13px; }
+.btn-p { background:linear-gradient(135deg,var(--gold),var(--gold-dim)); color:#0a0a15; letter-spacing:.08em; box-shadow:0 0 20px rgba(201,168,76,.3); }
+.btn-p:hover { box-shadow:0 0 28px rgba(201,168,76,.5); }
+.btn-p:disabled { background:var(--sf2); color:var(--ghost); box-shadow:none; cursor:not-allowed; }
+.btn-g { border:1px solid var(--bd2); background:rgba(255,255,255,.03); color:var(--dim); }
+.btn-g:hover { color:var(--text); }
+.btn-d { background:rgba(185,28,28,.15); border:1px solid #7f1d1d44; color:#fca5a5; }
+
+/* editor layout */
+.editor-layout { display:grid; grid-template-columns:1fr 200px; gap:22px; align-items:start; }
+.preview-wrap { position:sticky; top:16px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.preview-label { font-size:9px; letter-spacing:.3em; color:var(--ghost); }
+
+/* deck */
+.deck-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(138px,1fr)); gap:14px; }
+.d-item { display:flex; flex-direction:column; align-items:center; gap:7px; }
+.d-actions { display:flex; gap:5px; width:100%; }
+.d-actions .btn { flex:1; padding:6px 4px; font-size:10px; border-radius:6px; }
+.empty { text-align:center; padding:48px 20px; color:var(--ghost); }
+.empty .icon { font-size:44px; margin-bottom:12px; }
+.empty p { font-size:12px; line-height:1.8; }
+
+/* export */
+.export-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media(max-width:420px){ .export-row { grid-template-columns:1fr; } }
+.hint { background:var(--gold-faint); border:1px solid rgba(201,168,76,.15); border-radius:8px; padding:12px 14px; margin-top:12px; }
+.hint-t { font-size:10px; color:var(--gold); letter-spacing:.1em; margin-bottom:8px; }
+.hint ul { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.hint li { font-size:11px; color:#8a8070; display:flex; gap:8px; align-items:baseline; }
+.hint li::before { content:"✦"; color:rgba(201,168,76,.5); flex-shrink:0; }
+.url-box { display:none; margin-top:10px; }
+.url-row { display:flex; gap:6px; margin-top:4px; }
+.url-row input { font-size:10px; }
+.url-note { font-size:10px; color:var(--ghost); margin-top:5px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">TABI CARD MAKER</div>
+  <h1>🎴 旅カードメーカー</h1>
+  <p class="subtitle">旅行プラン対戦ゲーム用カード作成ツール — このHTMLファイル自体を友達に送れます</p>
+</header>
+
+<!-- Import banner (shown when URL has deck data) -->
+<div id="import-banner">
+  <span id="import-msg">📥 共有されたデッキを読み込みました</span>
+  <button onclick="importDeck()">インポート</button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab on" onclick="showTab('editor')">✏️　カード作成</button>
+  <button class="tab" onclick="showTab('deck')">🎴　デッキ <span class="badge" id="cnt">0枚</span></button>
+</div>
+
+<!-- ═══ EDITOR ═══ -->
+<div id="panel-editor" class="panel on">
+
+  <!-- Theme -->
+  <div class="section">
+    <div class="st">テーマ設定</div>
+    <div class="presets" id="presets-wrap"></div>
+    <div class="g-main" style="margin-bottom:10px">
+      <div><label>旅行テーマ名</label><input id="tripName" value="旅行プラン" oninput="onThemeChange()"></div>
+      <div><label>泊数</label><input id="nights" type="number" value="2" min="1" max="9" oninput="onThemeChange()"></div>
+    </div>
+    <div class="g3">
+      <div><label>ステータス①</label><input id="sl0" value="ワクワク度" oninput="onStatLabelChange()"></div>
+      <div><label>ステータス②</label><input id="sl1" value="映え度"     oninput="onStatLabelChange()"></div>
+      <div><label>ステータス③</label><input id="sl2" value="コスパ"     oninput="onStatLabelChange()"></div>
+    </div>
+  </div>
+
+  <div class="editor-layout">
+  <div>
+
+    <!-- Type -->
+    <div class="section">
+      <div class="st">カードタイプ</div>
+      <div class="types" id="types-wrap"></div>
+    </div>
+
+    <!-- Image -->
+    <div class="section">
+      <div class="st">画像（写真・イラスト）任意</div>
+      <div class="img-drop" id="img-drop" onclick="document.getElementById('img-file').click()">
+        <span class="img-ph">📷 クリックまたはドラッグで画像をアップロード</span>
+        <div class="img-ov"><span>クリックで変更</span></div>
+        <button class="img-clr" id="img-clr" onclick="event.stopPropagation();clearImg()">✕</button>
+      </div>
+      <input type="file" id="img-file" accept="image/*" style="display:none" onchange="loadImg(event)">
+    </div>
+
+    <!-- Name + push point -->
+    <div class="section">
+      <div class="st">カード情報</div>
+      <div style="margin-bottom:10px">
+        <label>スポット名・カード名 <span class="req">*</span></label>
+        <input id="cname" placeholder="例：成田山新勝寺、道後温泉本館…" oninput="onCardChange()" style="font-size:15px;font-weight:700;">
+      </div>
+      <div>
+        <label>推しポイント（ここに行くべき理由）</label>
+        <textarea id="push" rows="3" placeholder="見どころ・おすすめポイントを自由に" oninput="onCardChange()"></textarea>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="section">
+      <div class="st">ステータス（自己申告）</div>
+      <div id="stat-rows"></div>
+    </div>
+
+    <button class="btn btn-p" id="add-btn" onclick="addCard()" disabled style="width:100%;padding:13px;font-size:14px;letter-spacing:.1em;">
+      🎴　デッキに追加　→
+    </button>
+
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-wrap">
+    <div class="preview-label">LIVE PREVIEW</div>
+    <canvas id="prev" width="420" height="588" style="width:195px;height:273px;border-radius:10px;"></canvas>
+    <div style="font-size:9px;color:var(--ghost);text-align:center;">420 × 588 px で出力</div>
+  </div>
+  </div>
+</div>
+
+<!-- ═══ DECK ═══ -->
+<div id="panel-deck" class="panel">
+
+  <div id="deck-empty" class="empty">
+    <div class="icon">🎴</div>
+    <p>デッキが空です<br>「カード作成」タブからカードを追加してください</p>
+  </div>
+
+  <div id="deck-content" style="display:none">
+    <div class="deck-grid" id="deck-grid"></div>
+
+    <div class="section" style="margin-top:20px">
+      <div class="st">エクスポート ／ 配布</div>
+      <div class="export-row">
+        <button class="btn btn-g" onclick="dlAll()" style="padding:12px;font-size:12px;">⬇　全カードPNG 一括DL</button>
+        <button class="btn btn-p" onclick="genShareURL()" style="padding:12px;font-size:12px;letter-spacing:.03em;">🔗　URLで共有（画像なし）</button>
+      </div>
+
+      <div class="url-box" id="url-box">
+        <label>共有URL（コピーして友達に送る）</label>
+        <div class="url-row">
+          <input id="url-out" readonly>
+          <button class="btn btn-g" onclick="copyURL()" id="copy-btn" style="padding:8px 12px;font-size:11px;flex-shrink:0;">コピー</button>
+        </div>
+        <p class="url-note">※ 画像はURLに含まれません。カード名・推しポイント・ステータスの情報のみ共有されます。</p>
+      </div>
+
+      <div class="hint">
+        <div class="hint-t">配布方法ガイド</div>
+        <ul>
+          <li>このHTMLファイル自体をLINEやDiscordで送る → 受け取った人はブラウザで開くだけ、インストール不要</li>
+          <li>全カードPNGをダウンロード → Googleドライブや共有フォルダにまとめて置く</li>
+          <li>URLで共有 → カード情報（テキスト）をリンク1本で送れる。受け取った人はインポートで再現できる</li>
+          <li>GitHub Pagesに置けば永続URLになる（無料・アカウント登録のみ）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<script>
+// ══ DATA ══════════════════════════════════════
+const CT = [
+  {id:'spot',emoji:'🗾',label:'スポット',border:'#6d28d9',accent:'#c4b5fd',bg:'#130a2e'},
+  {id:'stay',emoji:'🛏',label:'宿泊',    border:'#047857',accent:'#6ee7b7',bg:'#022c22'},
+  {id:'food',emoji:'🍜',label:'グルメ',  border:'#b45309',accent:'#fcd34d',bg:'#1c1000'},
+  {id:'fate',emoji:'🎲',label:'運命',    border:'#b91c1c',accent:'#fca5a5',bg:'#1c0505'},
+];
+const PS = [
+  {id:'std',     emoji:'✦', label:'スタンダード',tripName:'旅行プラン',  stats:['ワクワク度','映え度','コスパ']},
+  {id:'yakuyoke',emoji:'⛩', label:'厄除け旅',    tripName:'厄除け旅行', stats:['厄除け力','楽しさ','コスパ']},
+  {id:'gourmet', emoji:'🍜',label:'グルメ旅',    tripName:'グルメ旅',   stats:['うまさ','映え度','コスパ']},
+  {id:'onsen',   emoji:'♨', label:'温泉旅',      tripName:'温泉旅',     stats:['癒し度','泉質','コスパ']},
+  {id:'scenic',  emoji:'🏔',label:'絶景旅',      tripName:'絶景旅',     stats:['絶景度','冒険度','コスパ']},
+  {id:'culture', emoji:'🏯',label:'文化・観光',  tripName:'観光旅',     stats:['定番度','満足度','コスパ']},
+  {id:'overseas',emoji:'🗺',label:'海外旅行',    tripName:'海外旅行',   stats:['異国情緒','冒険度','コスパ']},
+];
+
+let curType  = 'spot';
+let curImg   = null;
+let curStats = [3,3,3];
+let deck     = [];
+let sharedPayload = null;
+
+// ══ INIT ══════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  buildPresets();
+  buildTypes();
+  buildStatRows();
+  renderPreview();
+  checkImport();
+});
+
+// ══ PRESETS ═══════════════════════════════════
+function buildPresets() {
+  const w = document.getElementById('presets-wrap');
+  PS.forEach(ps => {
+    const b = document.createElement('button');
+    b.className = 'pbtn' + (ps.id==='std'?' on':'');
+    b.textContent = ps.emoji + ' ' + ps.label;
+    b.dataset.id = ps.id;
+    b.onclick = () => applyPreset(ps);
+    w.appendChild(b);
+  });
+}
+
+function applyPreset(ps) {
+  v('tripName', ps.tripName);
+  v('sl0', ps.stats[0]); v('sl1', ps.stats[1]); v('sl2', ps.stats[2]);
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.toggle('on', b.dataset.id===ps.id));
+  refreshStatLabels(); renderPreview();
+}
+
+// ══ CARD TYPES ════════════════════════════════
+function buildTypes() {
+  const w = document.getElementById('types-wrap');
+  CT.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tbtn' + (t.id==='spot'?' on':'');
+    b.dataset.id = t.id;
+    b.innerHTML = `<span class="em">${t.emoji}</span>${t.label}`;
+    applyTypeStyle(b, t, t.id==='spot');
+    b.onclick = () => {
+      curType = t.id;
+      document.querySelectorAll('.tbtn').forEach(x => {
+        const ct = CT.find(c=>c.id===x.dataset.id);
+        x.classList.remove('on'); applyTypeStyle(x, ct, false);
+      });
+      b.classList.add('on'); applyTypeStyle(b, t, true);
+      renderPreview();
+    };
+    w.appendChild(b);
+  });
+}
+
+function applyTypeStyle(el, t, on) {
+  el.style.borderColor  = on ? t.border : '';
+  el.style.background   = on ? t.bg : '';
+  el.style.color        = on ? t.accent : '';
+  el.style.boxShadow    = on ? `0 0 10px ${t.border}44` : '';
+}
+
+// ══ STAT ROWS ═════════════════════════════════
+function buildStatRows() {
+  const w = document.getElementById('stat-rows');
+  w.innerHTML = '';
+  getStatLabels().forEach((label, i) => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `<span class="sl" id="slbl${i}">${label}</span><div class="stars" id="stars${i}"></div>`;
+    w.appendChild(row);
+    renderStars(i);
+  });
+}
+
+function renderStars(idx) {
+  const w = document.getElementById(`stars${idx}`);
+  if (!w) return;
+  w.innerHTML = '';
+  for (let v=1; v<=5; v++) {
+    const s = document.createElement('span');
+    s.className = 'star' + (v<=curStats[idx]?' on':'');
+    s.textContent = '★';
+    s.onclick = () => { curStats[idx]=v; renderStars(idx); renderPreview(); };
+    w.appendChild(s);
+  }
+}
+
+function refreshStatLabels() {
+  getStatLabels().forEach((l, i) => {
+    const el = document.getElementById(`slbl${i}`);
+    if (el) el.textContent = l;
+  });
+  renderPreview();
+}
+
+function getStatLabels() {
+  return [g('sl0')||'①', g('sl1')||'②', g('sl2')||'③'];
+}
+
+// ══ IMAGE ═════════════════════════════════════
+function loadImg(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => { setImg(ev.target.result); };
+  r.readAsDataURL(f); e.target.value='';
+}
+
+function setImg(src) {
+  curImg = src;
+  const d = document.getElementById('img-drop');
+  d.style.backgroundImage = `url(${src})`; d.style.minHeight = '100px';
+  const clr = document.getElementById('img-clr');
+  clr.style.display = 'flex';
+  renderPreview();
+}
+
+function clearImg() {
+  curImg = null;
+  const d = document.getElementById('img-drop');
+  d.style.backgroundImage = ''; d.style.minHeight = '';
+  document.getElementById('img-clr').style.display = 'none';
+  renderPreview();
+}
+
+// Drag & drop
+document.addEventListener('DOMContentLoaded', () => {
+  const d = document.getElementById('img-drop');
+  d.addEventListener('dragover', e => { e.preventDefault(); d.style.borderColor='rgba(201,168,76,.6)'; });
+  d.addEventListener('dragleave', () => d.style.borderColor='');
+  d.addEventListener('drop', e => {
+    e.preventDefault(); d.style.borderColor='';
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) {
+      const r = new FileReader();
+      r.onload = ev => setImg(ev.target.result);
+      r.readAsDataURL(f);
+    }
+  });
+});
+
+// ══ CARD DATA ═════════════════════════════════
+function getCardData() {
+  return {
+    name:  g('cname'),
+    type:  curType,
+    image: curImg,
+    push:  g('push'),
+    stats: [...curStats],
+    statLabels: getStatLabels(),
+  };
+}
+
+function getTheme() {
+  return {
+    tripName: g('tripName')||'旅行プラン',
+    nights:   parseInt(g('nights'))||2,
+  };
+}
+
+function onCardChange() {
+  document.getElementById('add-btn').disabled = !g('cname').trim();
+  renderPreview();
+}
+
+function onThemeChange() { renderPreview(); }
+function onStatLabelChange() { refreshStatLabels(); }
+
+// ══ CANVAS ════════════════════════════════════
+function rrect(ctx,x,y,w,h,r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+function wrapTxt(ctx,text,x,y,maxW,lh,max) {
+  let line='',lines=[];
+  for (const ch of text) {
+    const t=line+ch;
+    if (ctx.measureText(t).width>maxW && line) { lines.push(line); line=ch; }
+    else line=t;
+  }
+  lines.push(line);
+  lines.slice(0,max).forEach((l,i) => {
+    const last = i===max-1 && lines.length>max;
+    ctx.fillText(last ? l.slice(0,-1)+'…' : l, x, y+i*lh);
+  });
+}
+
+async function drawCard(canvas, card, theme) {
+  const W=420,H=588;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+  const T = CT.find(t=>t.id===card.type)||CT[0];
+
+  // BG
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,T.bg); bg.addColorStop(1,'#060610');
+  rrect(ctx,0,0,W,H,18); ctx.fillStyle=bg; ctx.fill();
+
+  // Borders
+  rrect(ctx,1.5,1.5,W-3,H-3,17);
+  ctx.strokeStyle=T.border+'cc'; ctx.lineWidth=2.5; ctx.stroke();
+  rrect(ctx,7,7,W-14,H-14,13);
+  ctx.strokeStyle=T.accent+'18'; ctx.lineWidth=1; ctx.stroke();
+
+  // Image area (clipped top)
+  const imgH=230;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(4+14,4); ctx.lineTo(W-18,4);
+  ctx.quadraticCurveTo(W-4,4,W-4,18); ctx.lineTo(W-4,4+imgH);
+  ctx.lineTo(4,4+imgH); ctx.lineTo(4,18);
+  ctx.quadraticCurveTo(4,4,18,4); ctx.closePath(); ctx.clip();
+
+  if (card.image) {
+    const img = new Image();
+    await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=card.image; });
+    if (img.naturalWidth>0) {
+      const ir=img.width/img.height, ar=(W-8)/imgH;
+      let dx,dy,dw,dh;
+      if(ir>ar){dh=imgH;dw=dh*ir;dx=4-(dw-(W-8))/2;dy=4;}
+      else{dw=W-8;dh=dw/ir;dx=4;dy=4-(dh-imgH)/2;}
+      ctx.drawImage(img,dx,dy,dw,dh);
+      const fd=ctx.createLinearGradient(0,imgH-80,0,imgH+4);
+      fd.addColorStop(0,'rgba(0,0,0,0)'); fd.addColorStop(1,'rgba(0,0,0,0.82)');
+      ctx.fillStyle=fd; ctx.fillRect(4,4,W-8,imgH);
+    }
+  } else {
+    ctx.fillStyle=T.bg+'dd'; ctx.fillRect(0,0,W,imgH+8);
+    ctx.font='72px serif'; ctx.textAlign='center';
+    ctx.fillStyle=T.accent+'55'; ctx.fillText(T.emoji,W/2,imgH/2+30);
+  }
+  ctx.restore();
+
+  // Type badge
+  rrect(ctx,12,12,96,28,5); ctx.fillStyle=T.border; ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(`${T.emoji} ${T.label}`,60,31);
+
+  // Divider
+  const dv=ctx.createLinearGradient(0,0,W,0);
+  dv.addColorStop(0,'transparent'); dv.addColorStop(.15,T.accent+'88');
+  dv.addColorStop(.85,T.accent+'88'); dv.addColorStop(1,'transparent');
+  ctx.strokeStyle=dv; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(18,imgH+12); ctx.lineTo(W-18,imgH+12); ctx.stroke();
+
+  // Name
+  ctx.fillStyle='#f8f0dc'; ctx.font='bold 21px sans-serif'; ctx.textAlign='left';
+  ctx.fillText(card.name||'（名称未設定）',20,imgH+38);
+
+  // Push point
+  ctx.fillStyle='#b5ac94'; ctx.font='12.5px sans-serif';
+  wrapTxt(ctx, card.push||'', 20, imgH+62, W-40, 19, 4);
+
+  // Stats block
+  const sY=H-152;
+  rrect(ctx,16,sY,W-32,112,8);
+  ctx.fillStyle='rgba(255,255,255,0.04)'; ctx.fill();
+  ctx.strokeStyle=T.border+'44'; ctx.lineWidth=1; ctx.stroke();
+
+  (card.statLabels||['①','②','③']).forEach((lbl,i) => {
+    const y=sY+24+i*32;
+    ctx.fillStyle='#8a8070'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(lbl,28,y);
+    const vv=card.stats[i]||0;
+    for(let s=0;s<5;s++){
+      ctx.fillStyle=s<vv?'#f59e0b':'#1e1a2e';
+      ctx.font='17px serif'; ctx.fillText('★',126+s*25,y+2);
+    }
+  });
+
+  // Footer
+  ctx.strokeStyle=T.border+'44'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(16,H-32); ctx.lineTo(W-16,H-32); ctx.stroke();
+  ctx.fillStyle=T.accent+'88'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  const th=theme||getTheme();
+  ctx.fillText(`✦  ${th.tripName}  ·  ${th.nights}泊${th.nights+1}日  ✦`,W/2,H-14);
+}
+
+async function renderPreview() {
+  const c = document.getElementById('prev');
+  await drawCard(c, getCardData(), getTheme());
+}
+
+// ══ DECK ══════════════════════════════════════
+function addCard() {
+  const card = getCardData();
+  if (!card.name.trim()) return;
+  card.id = Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  deck.push(card);
+  refreshDeck();
+
+  // Reset
+  v('cname',''); v('push',''); clearImg();
+  curStats=[3,3,3];
+  [0,1,2].forEach(i=>renderStars(i));
+  renderPreview();
+  showTab('deck');
+}
+
+function removeCard(id) {
+  deck = deck.filter(c=>c.id!==id);
+  refreshDeck();
+}
+
+function refreshDeck() {
+  const grid   = document.getElementById('deck-grid');
+  const empty  = document.getElementById('deck-empty');
+  const content= document.getElementById('deck-content');
+  document.getElementById('cnt').textContent = deck.length+'枚';
+
+  if (deck.length===0) {
+    empty.style.display=''; content.style.display='none';
+    grid.innerHTML=''; return;
+  }
+  empty.style.display='none'; content.style.display='';
+  grid.innerHTML='';
+
+  deck.forEach(card => {
+    const item=document.createElement('div');
+    item.className='d-item';
+
+    const cvs=document.createElement('canvas');
+    cvs.width=420; cvs.height=588;
+    cvs.style.cssText='width:134px;height:187px;border-radius:8px;';
+    drawCard(cvs, card, getTheme());
+    item.appendChild(cvs);
+
+    const acts=document.createElement('div');
+    acts.className='d-actions';
+
+    const dlB=document.createElement('button');
+    dlB.className='btn btn-g'; dlB.textContent='⬇ PNG';
+    dlB.onclick=()=>dlCard(card);
+    acts.appendChild(dlB);
+
+    const rmB=document.createElement('button');
+    rmB.className='btn btn-d'; rmB.textContent='✕';
+    rmB.onclick=()=>removeCard(card.id);
+    acts.appendChild(rmB);
+
+    item.appendChild(acts);
+    grid.appendChild(item);
+  });
+}
+
+// ══ EXPORT ════════════════════════════════════
+async function dlCard(card) {
+  const cvs=document.createElement('canvas');
+  await drawCard(cvs, card, getTheme());
+  const a=document.createElement('a');
+  a.download=(card.name||'card')+'.png';
+  a.href=cvs.toDataURL('image/png'); a.click();
+}
+
+function dlAll() {
+  deck.forEach((c,i)=>setTimeout(()=>dlCard(c),i*550));
+}
+
+function genShareURL() {
+  const payload = {
+    theme: getTheme(),
+    statLabels: getStatLabels(),
+    cards: deck.map(c=>({n:c.name,t:c.type,p:c.push,s:c.stats,sl:c.statLabels})),
+  };
+  let encoded;
+  try { encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))); }
+  catch(e) { alert('URLの生成に失敗しました'); return; }
+
+  const base = location.href.split('?')[0].split('#')[0];
+  const url  = base + '#d=' + encoded;
+
+  const box = document.getElementById('url-box');
+  box.style.display='block';
+  document.getElementById('url-out').value=url;
+}
+
+function copyURL() {
+  const inp=document.getElementById('url-out');
+  navigator.clipboard.writeText(inp.value).then(()=>{
+    const b=document.getElementById('copy-btn');
+    b.textContent='✓ コピー完了'; b.style.color='#6ee7b7';
+    setTimeout(()=>{ b.textContent='コピー'; b.style.color=''; },2200);
+  });
+}
+
+// ══ URL IMPORT ════════════════════════════════
+function checkImport() {
+  const hash=location.hash;
+  if (!hash.startsWith('#d=')) return;
+  try {
+    const raw = hash.slice(3);
+    sharedPayload = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if (!sharedPayload?.cards?.length) return;
+    const n=sharedPayload.cards.length;
+    document.getElementById('import-msg').innerHTML =
+      `📥 共有されたデッキ（<b>${n}枚</b>）を読み込みました — 画像は含まれていません`;
+    document.getElementById('import-banner').style.display='flex';
+  } catch(e) { /* ignore bad hash */ }
+}
+
+function importDeck() {
+  if (!sharedPayload) return;
+  const { theme, statLabels, cards } = sharedPayload;
+
+  if (theme) {
+    v('tripName', theme.tripName||'旅行プラン');
+    v('nights', theme.nights||2);
+  }
+  if (statLabels) {
+    v('sl0',statLabels[0]||''); v('sl1',statLabels[1]||''); v('sl2',statLabels[2]||'');
+    refreshStatLabels();
+  }
+  cards.forEach(c => {
+    deck.push({
+      id: Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+      name:c.n||'', type:c.t||'spot', image:null,
+      push:c.p||'', stats:c.s||[3,3,3], statLabels:c.sl||getStatLabels(),
+    });
+  });
+
+  document.getElementById('import-banner').style.display='none';
+  history.replaceState(null,'',location.pathname);
+  refreshDeck();
+  showTab('deck');
+}
+
+// ══ TABS ══════════════════════════════════════
+function showTab(name) {
+  document.getElementById('panel-editor').classList.toggle('on', name==='editor');
+  document.getElementById('panel-deck'  ).classList.toggle('on', name==='deck');
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('on',(i===0&&name==='editor')||(i===1&&name==='deck'));
+  });
+}
+
+// ══ UTILS ═════════════════════════════════════
+function g(id) { const el=document.getElementById(id); return el?el.value:''; }
+function v(id,val) { const el=document.getElementById(id); if(el) el.value=val; }
+</script>
+</body>
+</html>
