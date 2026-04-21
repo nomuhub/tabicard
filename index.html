@@ -187,7 +187,8 @@ textarea { resize:vertical; line-height:1.7; }
       </div>
       <div>
         <label>推しポイント（ここに行くべき理由）</label>
-        <textarea id="push" rows="3" placeholder="見どころ・おすすめポイントを自由に" oninput="onCardChange()"></textarea>
+        <textarea id="push" rows="6" placeholder="見どころ・おすすめポイントを自由に（Enterで改行）" oninput="onCardChange()"></textarea>
+        <div id="push-counter" style="font-size:10px;margin-top:4px;text-align:right;color:var(--dim);letter-spacing:.03em;transition:color .15s;"></div>
       </div>
     </div>
 
@@ -435,6 +436,7 @@ function getTheme() {
 
 function onCardChange() {
   document.getElementById('add-btn').disabled = !g('cname').trim();
+  updatePushCounter();
   renderPreview();
 }
 
@@ -451,18 +453,99 @@ function rrect(ctx,x,y,w,h,r) {
   ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
 }
 
+// 改行(\n)対応テキスト折り返し描画
 function wrapTxt(ctx,text,x,y,maxW,lh,max) {
-  let line='',lines=[];
-  for (const ch of text) {
-    const t=line+ch;
-    if (ctx.measureText(t).width>maxW && line) { lines.push(line); line=ch; }
-    else line=t;
-  }
-  lines.push(line);
-  lines.slice(0,max).forEach((l,i) => {
-    const last = i===max-1 && lines.length>max;
-    ctx.fillText(last ? l.slice(0,-1)+'…' : l, x, y+i*lh);
+  const lines = textToLines(ctx, text, maxW, max);
+  lines.forEach((l,i) => {
+    ctx.fillText(l, x, y+i*lh);
   });
+}
+
+// テキストを折り返し済みの行配列に変換（改行対応）
+function textToLines(ctx, text, maxW, max) {
+  const paras = text.split('\n');
+  const result = [];
+  for (const para of paras) {
+    if (result.length >= max) break;
+    if (para === '') {
+      result.push(''); continue;
+    }
+    let line = '';
+    for (const ch of para) {
+      const t = line + ch;
+      if (ctx.measureText(t).width > maxW && line) {
+        result.push(line);
+        if (result.length >= max) break;
+        line = ch;
+      } else { line = t; }
+    }
+    if (result.length < max) result.push(line);
+  }
+  // 最後の行が切れていたら … を付ける
+  const totalLines = (function(){
+    const p2 = text.split('\n'); let n=0;
+    for (const para of p2) {
+      if (para===''){n++;continue;}
+      let ln='';
+      for (const ch of para){const t=ln+ch;if(ctx.measureText(t).width>maxW&&ln){n++;ln=ch;}else ln=t;}
+      n++;
+    }
+    return n;
+  })();
+  if (totalLines > max && result.length === max) {
+    const last = result[max-1];
+    result[max-1] = last.slice(0,-1)+'…';
+  }
+  return result;
+}
+
+// カウンター用：表示できる文字数を計算してカウンターを更新
+function updatePushCounter() {
+  const text = g('push');
+  const counterEl = document.getElementById('push-counter');
+  if (!counterEl) return;
+  if (!text) { counterEl.textContent = ''; return; }
+
+  const MAX_W = 380, MAX_LINES = 7;
+  const offCvs = document.createElement('canvas');
+  const offCtx = offCvs.getContext('2d');
+  offCtx.font = '12.5px sans-serif';
+
+  // 全行を展開して何行になるか計算
+  const paras = text.split('\n');
+  let totalLines = 0, visibleChars = 0, overflowed = false;
+  outer: for (const para of paras) {
+    if (para === '') {
+      totalLines++;
+      if (totalLines <= MAX_LINES) visibleChars++;  // count the \n
+      if (totalLines > MAX_LINES) { overflowed=true; break; }
+      continue;
+    }
+    let line = '';
+    for (const ch of para) {
+      const t = line + ch;
+      if (offCtx.measureText(t).width > MAX_W && line) {
+        totalLines++;
+        if (totalLines <= MAX_LINES) visibleChars += line.length;
+        if (totalLines > MAX_LINES) { overflowed=true; break outer; }
+        line = ch;
+      } else { line = t; }
+    }
+    totalLines++;
+    if (totalLines <= MAX_LINES) visibleChars += line.length;
+    if (totalLines > MAX_LINES) { overflowed=true; break; }
+    visibleChars++;  // count the \n
+  }
+  if (!overflowed) visibleChars = text.length;
+
+  const total = text.length;
+  if (overflowed) {
+    counterEl.textContent = `⚠ ${visibleChars}文字まで表示 / 入力${total}文字（カードに収まりません）`;
+    counterEl.style.color = '#f97316';
+  } else {
+    counterEl.textContent = `${total}文字入力中　（カードに収まっています）`;
+    counterEl.style.color = 'var(--dim)';
+  }
 }
 
 async function drawCard(canvas, card, theme) {
@@ -529,7 +612,7 @@ async function drawCard(canvas, card, theme) {
 
   // Push point
   ctx.fillStyle='#b5ac94'; ctx.font='12.5px sans-serif';
-  wrapTxt(ctx, card.push||'', 20, imgH+62, W-40, 19, 4);
+  wrapTxt(ctx, card.push||'', 20, imgH+62, W-40, 19, 7);
 
   // Stats block
   const sY=H-152;
@@ -571,6 +654,7 @@ function addCard() {
 
   // Reset
   v('cname',''); v('push',''); clearImg();
+  updatePushCounter();
   curStats=[3,3,3];
   [0,1,2].forEach(i=>renderStars(i));
   renderPreview();
